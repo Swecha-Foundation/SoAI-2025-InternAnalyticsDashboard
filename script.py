@@ -2,8 +2,22 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 
-def display_data(data):
+def display_data(data, cohort_type, intern_type):
     df = pd.DataFrame(data)
+
+    if intern_type == "ai":
+        filter_data = 25000
+    elif intern_type == "techlead":
+        filter_data = 1730
+    else:
+        st.info("Please select intern type.")
+        return
+
+
+    if cohort_type == "cohort1":
+        df = df[df['Id'] <= filter_data]
+    else:
+        df = df[df['Id'] > filter_data]
 
     # Rename columns for easier access
     df.rename(columns={
