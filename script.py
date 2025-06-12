@@ -114,3 +114,9 @@ def display_data(data, cohort_type, intern_type):
     ).properties(width=700, height=400)
 
     st.altair_chart(gender_chart, use_container_width=True)
+
+def display_sankey_diagram():
+    st.info("🚧 Sankey diagram is under development. Coming soon!")
+
+def display_sunburst_diagram():
+    st.info("🚧 Sunburst diagram is under development. Coming soon!")
