@@ -16,82 +16,70 @@ HEADERS = {
 st.set_page_config(page_title="Intern Registrations Dashboard", layout="wide")
 st.title("🎓 Intern Registrations Dashboard")
 
+# --- UNIFIED SESSION STATE & DATA LOADING ---
+
+@st.cache_data
+def load_all_data():
+    """Fetches both datasets and returns them as a tuple."""
+    ai_data = fetch_data(API_URL, HEADERS)
+    techlead_data = fetch_data(LEAD_URL, HEADERS)
+    return ai_data, techlead_data
+
+# Load the data once using the cached function
+ai_data, techlead_data = load_all_data()
+
 # Initialize session state
-if "intern_type" not in st.session_state:
-    st.session_state.intern_type = "ai"
-if "data" not in st.session_state:
-    st.session_state.data = None
-if "cohort_type" not in st.session_state:
-    st.session_state.cohort_type = "cohort1"  # Default to cohort1
-if "view_type" not in st.session_state:
-    st.session_state.view_type = "tabular"  # Default to tabular view
+if "intern_type" not in st.session_state: st.session_state.intern_type = "ai"
+if "data" not in st.session_state: st.session_state.data = None
+if "cohort_type" not in st.session_state: st.session_state.cohort_type = "cohort1"
+if "view_type" not in st.session_state: st.session_state.view_type = "tabular"
 
-# Cohort selection dropdown
+# --- UI CONTROLS ---
+
 st.subheader("Select Cohort")
-cohort_options = ["cohort1", "cohort2"]
-selected_cohort = st.selectbox(
-    "Choose a cohort:",
-    cohort_options,
-    index=cohort_options.index(st.session_state.cohort_type),
-    key="cohort_selectbox"
+selected_cohort = st.selectbox("Choose a cohort:", ["cohort1", "cohort2"], key="cohort_selector")
+st.session_state.cohort_type = selected_cohort
+st.subheader(f"Selected Cohort: {st.session_state.cohort_type.upper()}")
+
+st.subheader("Select View Type")
+selected_view = st.selectbox(
+    "Choose a view type:",
+    ["tabular", "sankey", "sunburst"],
+    format_func=lambda x: {"tabular": "Tabular View", "sankey": "Sankey Diagram View", "sunburst": "Sunburst View"}[x],
+    key="view_selector"
 )
+st.session_state.view_type = selected_view
 
-# Update session state if cohort changes
-if selected_cohort != st.session_state.cohort_type:
-    st.session_state.cohort_type = selected_cohort
+# Refresh button to manually clear cache and re-fetch data
+if st.button("🔄 Refresh Data"):
+    st.cache_data.clear()
+    st.rerun()
 
-# If a cohort is selected
-if st.session_state.cohort_type:
-    st.subheader(f"Selected Cohort: {st.session_state.cohort_type.upper()}")
+# --- DISPLAY CONTENT BASED ON VIEW TYPE ---
 
-    st.subheader("Select View Type")
-    view_options = ["tabular", "sankey", "sunburst"]
-    view_labels = ["Tabular View", "Sankey Diagram View", "Sunburst View"]
-    selected_view = st.selectbox(
-        "Choose a view type:",
-        view_options,
-        format_func=lambda x: view_labels[view_options.index(x)],
-        index=view_options.index(st.session_state.view_type),
-        key="view_selectbox"
-    )
-
-    # Update session state if view type changes
-    if selected_view != st.session_state.view_type:
-        st.session_state.view_type = selected_view
-
-    # Buttons for intern types
+if ai_data is not None and techlead_data is not None:
     if st.session_state.view_type == "tabular":
+        st.subheader("Select Intern Type for Tabular View")
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("🤖 AI Developer Intern"):
+            if st.button("🤖 AI Developer Intern", use_container_width=True):
                 st.session_state.intern_type = "ai"
-                with st.spinner("Fetching AI Developer Intern data..."):
-                    st.session_state.data = fetch_data(API_URL, HEADERS)
-
+                st.session_state.data = ai_data
         with col2:
-            if st.button("🧑‍💻 Tech Lead Intern"):
+            if st.button("🧑‍💻 Tech Lead Intern", use_container_width=True):
                 st.session_state.intern_type = "techlead"
-                with st.spinner("Fetching Tech Lead Intern data..."):
-                    st.session_state.data = fetch_data(LEAD_URL, HEADERS)
+                st.session_state.data = techlead_data
 
-        # Refresh button
-        if st.button("🔄 Refresh"):
-            fetch_data.clear()
-            if st.session_state.intern_type:
-                with st.spinner("Refreshing data..."):
-                    if st.session_state.intern_type == "techlead":
-                        st.session_state.data = fetch_data(LEAD_URL, HEADERS)
-                    else:
-                        st.session_state.data = fetch_data(API_URL, HEADERS)
-
-        # Display data
         if st.session_state.data is not None:
             display_data(st.session_state.data, st.session_state.cohort_type, st.session_state.intern_type)
         else:
-            st.info("Please select an intern type to load data.")
+            st.info("Please select an intern type to load the Tabular View.")
+
     elif st.session_state.view_type == "sankey":
-        display_sankey_diagram()
+        # The data is already loaded, so we just pass it.
+        display_sankey_diagram(ai_data, techlead_data, st.session_state.cohort_type)
+
     elif st.session_state.view_type == "sunburst":
-        display_sunburst_diagram()
+        display_sunburst_diagram(ai_data, techlead_data, st.session_state.cohort_type)
 else:
-    st.info("Please select a cohort type.")
+    st.error("Could not fetch the required data. Please check your API connection and secrets, then click the Refresh button.")

@@ -1,3 +1,7 @@
-.streamlit
-__pycache__
-.devcontainer
+venv/
+.streamlit/
+
+__pycache__/
+.devcontainer/
+
+
